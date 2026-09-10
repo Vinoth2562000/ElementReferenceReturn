@@ -5,7 +5,6 @@
       "name": "Launch and Debug Blazor WebAssembly",
       "type": "dotnet",
       "request": "launch",
-      "preLaunchTask": "build",
       "projectPath": "${workspaceFolder}\\StandaloneWebAssembly.csproj"
     }
   ]
