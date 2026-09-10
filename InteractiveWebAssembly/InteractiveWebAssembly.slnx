@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="InteractiveWebAssembly.Client/InteractiveWebAssembly.Client.csproj" />
+  <Project Path="InteractiveWebAssembly/InteractiveWebAssembly.csproj" />
+</Solution>
