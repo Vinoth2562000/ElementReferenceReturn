@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Validation\\ElementReferenceReturn\\StandaloneWebAssembly\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{389CD0A0-63B7-E01D-AEEC-760C1F359FD9}|StandaloneWebAssembly.csproj|d:\\validation\\elementreferencereturn\\standalonewebassembly\\standalonewebassembly.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{389CD0A0-63B7-E01D-AEEC-760C1F359FD9}|StandaloneWebAssembly.csproj|solutionrelative:standalonewebassembly.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "StandaloneWebAssembly",
+              "DocumentMoniker": "D:\\Validation\\ElementReferenceReturn\\StandaloneWebAssembly\\StandaloneWebAssembly.csproj",
+              "RelativeDocumentMoniker": "StandaloneWebAssembly.csproj",
+              "ToolTip": "D:\\Validation\\ElementReferenceReturn\\StandaloneWebAssembly\\StandaloneWebAssembly.csproj",
+              "RelativeToolTip": "StandaloneWebAssembly.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-09-10T09:37:19.796Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

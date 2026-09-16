@@ -1,0 +1,263 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<PageTitle>ElementReference validation</PageTitle>
+
+<div class="validation-page">
+	<header class="validation-header">
+		<p class="eyebrow">ASP.NET Core #69159</p>
+		<h1>ElementReference return validation</h1>
+		<p>JavaScript finds the first empty captured input, returns it to .NET, and a separate JavaScript call highlights it.</p>
+	</header>
+
+	<div class="validation-grid">
+		<main class="test-panel">
+			<div class="panel-heading">
+				<div>
+					<h2>Contact form</h2>
+					<p>Change the values or use a preset, then find the next field.</p>
+				</div>
+				<span class="framework-badge">@System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription</span>
+			</div>
+
+			<div id="validation-contact-form" class="contact-form">
+				<div class="field-group">
+					<label for="full-name">Full name</label>
+					<input id="full-name" class="form-control" value="@fullName" @ref="fullNameElement"
+						   data-validation-candidate data-field-label="Full name" autocomplete="name" />
+				</div>
+				<div class="field-group">
+					<label for="email">Email</label>
+					<input id="email" class="form-control" type="email" value="@email" @ref="emailElement"
+						   data-validation-candidate data-field-label="Email" autocomplete="email" />
+				</div>
+				<div class="field-group">
+					<label for="message">Message</label>
+					<textarea id="message" class="form-control" rows="4" value="@message" @ref="messageElement"
+							  data-validation-candidate data-field-label="Message"></textarea>
+				</div>
+
+				<div class="action-row">
+					<button type="button" class="btn btn-primary" @onclick="FindAndHighlightAsync" disabled="@isRunning">
+						Find next field
+					</button>
+					<button type="button" class="btn btn-outline-secondary" @onclick="ClearHighlightAsync" disabled="@isRunning">
+						Clear highlight
+					</button>
+				</div>
+			</div>
+
+			<section class="presets" aria-labelledby="preset-heading">
+				<h3 id="preset-heading">Scenario presets</h3>
+				<div class="preset-buttons">
+					<button type="button" class="btn btn-sm btn-outline-dark" @onclick="SelectFirstFieldScenario">1. Select name</button>
+					<button type="button" class="btn btn-sm btn-outline-dark" @onclick="SelectSecondFieldScenario">2. Select email</button>
+					<button type="button" class="btn btn-sm btn-outline-dark" @onclick="SelectThirdFieldScenario">3. Select message</button>
+					<button type="button" class="btn btn-sm btn-outline-dark" @onclick="SelectNoMatchScenario">4. No empty field</button>
+				</div>
+			</section>
+
+			<section class="boundary-test" aria-labelledby="boundary-heading">
+				<div>
+					<h3 id="boundary-heading">Uncaptured element boundary</h3>
+					<p>This input intentionally has no <code>@@ref</code>. Returning it should fail with <code>__internalId is required</code>.</p>
+				</div>
+				<input id="uncaptured-field" class="form-control" value="Not captured by Blazor" aria-label="Uncaptured test input" />
+				<button type="button" class="btn btn-outline-danger" @onclick="TestUncapturedElementAsync" disabled="@isRunning">
+					Return uncaptured element
+				</button>
+			</section>
+		</main>
+
+		<aside class="evidence-panel" aria-live="polite">
+			<div class="panel-heading">
+				<div>
+					<h2>Evidence</h2>
+					<p>Each interop result is recorded here.</p>
+				</div>
+				<button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ClearEvidence" disabled="@(evidence.Count == 0)">Clear</button>
+			</div>
+
+			@if (evidence.Count == 0)
+			{
+				<p class="empty-evidence">Run a scenario to capture its result.</p>
+			}
+			else
+			{
+				<ol class="evidence-list">
+					@foreach (var item in evidence)
+					{
+						<li class="evidence-item @item.CssClass">
+							<div><strong>@item.Outcome</strong><time>@item.Timestamp.ToString("HH:mm:ss")</time></div>
+							<p>@item.Detail</p>
+						</li>
+					}
+				</ol>
+			}
+		</aside>
+	</div>
+</div>
+
+@code {
+	private IJSObjectReference? module;
+	private ElementReference fullNameElement;
+	private ElementReference emailElement;
+	private ElementReference messageElement;
+	private string? fullName;
+	private string? email;
+	private string? message;
+	private bool isRunning;
+	private readonly List<EvidenceItem> evidence = [];
+
+	private async Task FindAndHighlightAsync()
+	{
+		await RunInteropAsync("Captured element", async () =>
+		{
+			var jsModule = await GetModuleAsync();
+			ElementReference? selectedElement;
+
+			try
+			{
+				selectedElement = await jsModule.InvokeAsync<ElementReference?>("findNextEmptyCapturedField");
+			}
+			catch (JSException exception)
+			{
+				AddEvidence("Failed", $"Captured element: {exception.Message}", "failed");
+				return;
+			}
+
+			if (selectedElement is null)
+			{
+				AddEvidence("No match", "JavaScript returned null because every captured field has a value.", "neutral");
+				return;
+			}
+
+			string selectedLabel;
+
+			try
+			{
+				selectedLabel = await jsModule.InvokeAsync<string>("highlightField", selectedElement.Value);
+			}
+			catch (JSException exception)
+			{
+				AddEvidence("Failed", $"Highlight field: {exception.Message}", "failed");
+				return;
+			}
+
+			AddEvidence("Passed", $"JavaScript returned the captured '{selectedLabel}' element; .NET passed it back and the highlight was applied.", "passed");
+		});
+	}
+
+	private async Task TestUncapturedElementAsync()
+	{
+		await RunInteropAsync("Uncaptured boundary", async () =>
+		{
+			var jsModule = await GetModuleAsync();
+
+			try
+			{
+				var element = await jsModule.InvokeAsync<ElementReference>("getUncapturedField");
+				var selectedLabel = await jsModule.InvokeAsync<string>("highlightField", element);
+				AddEvidence("Unexpected pass", $"The uncaptured '{selectedLabel}' element was returned without an exception.", "failed");
+			}
+			catch (JSException exception)
+			{
+				var isInternalIdFailure = exception.Message.Contains("__internalId is required", StringComparison.Ordinal);
+				var outcome = isInternalIdFailure ? "Expected failure" : "Failed";
+				var cssClass = isInternalIdFailure ? "passed" : "failed";
+				AddEvidence(outcome, $"Uncaptured boundary: {exception.Message}", cssClass);
+			}
+		}, expectedFailure: true);
+	}
+
+	private async Task RunInteropAsync(string scenario, Func<Task> action, bool expectedFailure = false)
+	{
+		isRunning = true;
+
+		try
+		{
+			await action();
+		}
+		catch (JSException exception)
+		{
+			var isInternalIdFailure = exception.Message.Contains("__internalId is required", StringComparison.Ordinal);
+			var outcome = expectedFailure && isInternalIdFailure ? "Expected failure" : "Failed";
+			var cssClass = expectedFailure && isInternalIdFailure ? "passed" : "failed";
+			AddEvidence(outcome, $"{scenario}: {exception.Message}", cssClass);
+		}
+		catch (Exception exception)
+		{
+			AddEvidence("Failed", $"{scenario}: {exception.Message}", "failed");
+		}
+		finally
+		{
+			isRunning = false;
+		}
+	}
+
+	private async Task<IJSObjectReference> GetModuleAsync()
+	{
+		try
+		{
+			module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/Home.razor.js");
+			return module;
+		}
+		catch (JSException exception)
+		{
+			throw new InvalidOperationException("Failed to import the JavaScript module.", exception);
+		}
+	}
+
+	private async Task ClearHighlightAsync()
+	{
+		try
+		{
+			var jsModule = await GetModuleAsync();
+			await jsModule.InvokeVoidAsync("clearHighlight");
+		}
+		catch (JSException exception)
+		{
+			throw new InvalidOperationException("Failed to clear the highlight.", exception);
+		}
+	}
+
+	private void SelectFirstFieldScenario() => SetValues(null, null, null);
+
+	private void SelectSecondFieldScenario() => SetValues("Ada Lovelace", null, null);
+
+	private void SelectThirdFieldScenario() => SetValues("Ada Lovelace", "ada@example.com", null);
+
+	private void SelectNoMatchScenario() => SetValues("Ada Lovelace", "ada@example.com", "Please contact me.");
+
+	private void SetValues(string? nameValue, string? emailValue, string? messageValue)
+	{
+		fullName = nameValue;
+		email = emailValue;
+		message = messageValue;
+	}
+
+	private void AddEvidence(string outcome, string detail, string cssClass)
+	{
+		evidence.Insert(0, new EvidenceItem(DateTime.Now, outcome, detail, cssClass));
+	}
+
+	private void ClearEvidence() => evidence.Clear();
+
+	public async ValueTask DisposeAsync()
+	{
+		if (module is not null)
+		{
+			try
+			{
+				await module.DisposeAsync();
+			}
+			catch (JSDisconnectedException)
+			{
+			}
+		}
+	}
+
+	private sealed record EvidenceItem(DateTime Timestamp, string Outcome, string Detail, string CssClass);
+}
