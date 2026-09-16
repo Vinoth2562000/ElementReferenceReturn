@@ -19,6 +19,8 @@ The flow is:
 
 This did not work in .NET 10, but it works in the tested .NET 11 build. I added the same test to three different Blazor hosting models to make sure the behavior is consistent.
 
+The results in this repository were tested at commit [`d632449f16ae18b4967c9f0c1de6c49330b308aa`](https://github.com/Vinoth2562000/ElementReferenceReturn/commit/d632449f16ae18b4967c9f0c1de6c49330b308aa).
+
 ## Projects
 
 | Project | Hosting model | Page |
