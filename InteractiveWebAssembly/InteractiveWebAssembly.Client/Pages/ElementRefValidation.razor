@@ -116,7 +116,17 @@
 		await RunInteropAsync("Captured element", async () =>
 		{
 			var jsModule = await GetModuleAsync();
-			var selectedElement = await jsModule.InvokeAsync<ElementReference?>("findNextEmptyCapturedField");
+			ElementReference? selectedElement;
+
+			try
+			{
+				selectedElement = await jsModule.InvokeAsync<ElementReference?>("findNextEmptyCapturedField");
+			}
+			catch (JSException exception)
+			{
+				AddEvidence("Failed", $"Captured element: {exception.Message}", "failed");
+				return;
+			}
 
 			if (selectedElement is null)
 			{
@@ -124,7 +134,18 @@
 				return;
 			}
 
-			var selectedLabel = await jsModule.InvokeAsync<string>("highlightField", selectedElement.Value);
+			string selectedLabel;
+
+			try
+			{
+				selectedLabel = await jsModule.InvokeAsync<string>("highlightField", selectedElement.Value);
+			}
+			catch (JSException exception)
+			{
+				AddEvidence("Failed", $"Highlight element: {exception.Message}", "failed");
+				return;
+			}
+
 			AddEvidence("Passed", $"JavaScript returned the captured '{selectedLabel}' element; .NET passed it back and the highlight was applied.", "passed");
 		});
 	}
@@ -134,9 +155,20 @@
 		await RunInteropAsync("Uncaptured boundary", async () =>
 		{
 			var jsModule = await GetModuleAsync();
-			var element = await jsModule.InvokeAsync<ElementReference>("getUncapturedField");
-			var selectedLabel = await jsModule.InvokeAsync<string>("highlightField", element);
-			AddEvidence("Unexpected pass", $"The uncaptured '{selectedLabel}' element was returned without an exception.", "failed");
+
+			try
+			{
+				var element = await jsModule.InvokeAsync<ElementReference>("getUncapturedField");
+				var selectedLabel = await jsModule.InvokeAsync<string>("highlightField", element);
+				AddEvidence("Unexpected pass", $"The uncaptured '{selectedLabel}' element was returned without an exception.", "failed");
+			}
+			catch (JSException exception)
+			{
+				var isInternalIdFailure = exception.Message.Contains("__internalId is required", StringComparison.Ordinal);
+				var outcome = isInternalIdFailure ? "Expected failure" : "Failed";
+				var cssClass = isInternalIdFailure ? "passed" : "failed";
+				AddEvidence(outcome, $"Uncaptured boundary: {exception.Message}", cssClass);
+			}
 		}, expectedFailure: true);
 	}
 
@@ -167,14 +199,34 @@
 
 	private async Task<IJSObjectReference> GetModuleAsync()
 	{
-		module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Pages/ElementRefValidation.razor.js");
+		if (module is null)
+		{
+			try
+			{
+				module = await JS.InvokeAsync<IJSObjectReference>("import", "./Pages/ElementRefValidation.razor.js");
+			}
+			catch (JSException exception)
+			{
+				AddEvidence("Failed", $"Load JavaScript module: {exception.Message}", "failed");
+				throw;
+			}
+		}
+
 		return module;
 	}
 
 	private async Task ClearHighlightAsync()
 	{
 		var jsModule = await GetModuleAsync();
-		await jsModule.InvokeVoidAsync("clearHighlight");
+		try
+		{
+			await jsModule.InvokeVoidAsync("clearHighlight");
+		}
+		catch (JSException exception)
+		{
+			AddEvidence("Failed", $"Clear highlight: {exception.Message}", "failed");
+			throw;
+		}
 	}
 
 	private void SelectFirstFieldScenario() => SetValues(null, null, null);
