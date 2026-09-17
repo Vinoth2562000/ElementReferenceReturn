@@ -65,6 +65,32 @@ dotnet --list-sdks
 dotnet --list-runtimes
 ```
 
+## Clean-clone setup
+
+I used commit [`21842fa6ecee6a31fbc1dbb864b7a70050fd4ca6`](https://github.com/Vinoth2562000/ElementReferenceReturn/commit/21842fa6ecee6a31fbc1dbb864b7a70050fd4ca6) as the baseline for this validation.
+
+Start from a clean clone:
+
+```powershell
+git clone https://github.com/Vinoth2562000/ElementReferenceReturn.git
+Set-Location .\ElementReferenceReturn
+git checkout 21842fa6ecee6a31fbc1dbb864b7a70050fd4ca6
+```
+
+Restore all three hosting models for both framework versions:
+
+```powershell
+dotnet restore .\NET10\InteractiveServer\InteractiveServer.slnx
+dotnet restore .\NET10\InteractiveWebAssembly\InteractiveWebAssembly.slnx
+dotnet restore .\NET10\StandaloneWebAssembly\StandaloneWebAssembly.slnx
+
+dotnet restore .\NET11\InteractiveServer\InteractiveServer.slnx
+dotnet restore .\NET11\InteractiveWebAssembly\InteractiveWebAssembly.slnx
+dotnet restore .\NET11\StandaloneWebAssembly\StandaloneWebAssembly.slnx
+```
+
+After restore completes, use the build commands below. To run and verify a sample, follow the **Running the samples** and **Reproducing the test** sections.
+
 ## Build status
 
 I built all six samples on September 16, 2026 using:
